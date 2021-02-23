@@ -1,5 +1,9 @@
 # wine-osu
 
+Original PKGBUILD from ThePooN and Geno: https://gitlab.com/telastrus/wine-osu & https://blot.thepoon.fr/osuLinuxAudioLatency
+Original Patches from gonX, openglfreak and tdeo
+**Join ThePooN's Discord Server for any questions and problems regarding running osu! using Wine https://discord.com/invite/thepoon**
+
 The `master` branch uses stable wine and seems to work the best, but the `staging` branch is available if you want to play around. 
 
 **NOTE: CURRENTLY AUDIO COMPATIBILITY MUST BE TURNED ON IN osu! FOR THIS TO WORK** (probably a bug, still investigating)
