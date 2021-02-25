@@ -7,14 +7,14 @@
 
 pkgname=wine-osu
 pkgver=5.22
-pkgrel=1
+pkgrel=2
 
 _pkgbasever=${pkgver/rc/-rc}
 
 source=(https://dl.winehq.org/wine/source/5.x/wine-$_pkgbasever.tar.xz{,.sign}
         ps0344-p0001-secur32-Fix-crash-from-invalid-context-in-Initialize.patch
         wine-4.2-alsa-lower-latency.patch
-        winepulse-v515revert-osu.patch
+        winepulse-v515revert-ultimate.patch
 )
 sha512sums=('SKIP'
             'SKIP'
@@ -111,7 +111,7 @@ prepare() {
   export CFLAGS="${CFLAGS/-fno-plt/}"
   export LDFLAGS="${LDFLAGS/,-z,now/}"
 
-  patch -d $pkgname -Np1 < winepulse-v515revert-osu.patch
+  patch -d $pkgname -Np1 < winepulse-v515revert-ultimate.patch
   patch -d $pkgname -Np1 < wine-4.2-alsa-lower-latency.patch
   patch -d $pkgname -Np1 < ps0344-p0001-secur32-Fix-crash-from-invalid-context-in-Initialize.patch
 

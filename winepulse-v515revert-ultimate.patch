@@ -988,3 +988,126 @@ index 417067f0bf8..d816eada24d 100644
  
      if (This->share == AUDCLNT_SHAREMODE_EXCLUSIVE)
          *pos /= pa_frame_size(&This->ss);
+         pulse_def_period[!render] = pulse_min_period[!render] = pa_bytes_to_usec(10 * length, &ss);
+ 
+-    if (pulse_min_period[!render] < MinimumPeriod)
+-        pulse_min_period[!render] = MinimumPeriod;
+-
+-    if (pulse_def_period[!render] < DefaultPeriod)
+-        pulse_def_period[!render] = DefaultPeriod;
+-
+     wfx->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+     wfx->cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+ 
+@@ -1135,11 +1129,19 @@ static HRESULT pulse_stream_connect(ACImpl *This, UINT32 period_bytes) {
+     pa_stream_set_buffer_attr_callback(This->stream, pulse_attr_update, This);
+     pa_stream_set_moved_callback(This->stream, pulse_attr_update, This);
+ 
+-    /* PulseAudio will fill in correct values */
+-    attr.minreq = attr.fragsize = period_bytes;
+-    attr.tlength = period_bytes * 3;
+-    attr.maxlength = This->bufsize_frames * pa_frame_size(&This->ss);
+-    attr.prebuf = pa_frame_size(&This->ss);
++    attr.minreq = 16;
++    attr.prebuf = 8;
++    const char* tenv = getenv("STAGING_TLENGTH_USEC");
++    if (tenv) {
++        int val = atoi(tenv);
++        attr.maxlength               = pa_usec_to_bytes(val * 4, &This->ss);
++        attr.tlength = attr.fragsize = pa_usec_to_bytes(val, &This->ss);
++        printf("Pulse tlength/fragsize set to %d.\n", attr.tlength);
++    } else {
++        attr.maxlength               = pa_usec_to_bytes(10000, &This->ss);
++        attr.tlength = attr.fragsize = period_bytes * 3;
++        printf("Pulse tlength/fragsize KEPT at %d.\n", attr.tlength);
++    }
+     dump_attr(&attr);
+     if (This->dataflow == eRender)
+         ret = pa_stream_connect_playback(This->stream, NULL, &attr,
+
+@@ -2414,8 +2414,10 @@ static HRESULT WINAPI AudioClient_Start(IAudioClient3 *iface)
+         This->started = TRUE;
+         This->just_started = TRUE;
+ 
+-        if(!This->timer)
++        if(!This->timer) {
+             This->timer = CreateThread(NULL, 0, pulse_timer_cb, This, 0, NULL);
++            SetThreadPriority(This->timer, THREAD_PRIORITY_TIME_CRITICAL);
++        }
+     }
+     pthread_mutex_unlock(&pulse_lock);
+     return hr;
+-- 
+2.30.1
+
+@@ -38,6 +38,7 @@
+ #include "winbase.h"
+ #include "winnls.h"
+ #include "winreg.h"
++#include "winternl.h"
+ #include "wine/debug.h"
+ #include "wine/unicode.h"
+ #include "wine/list.h"
+@@ -1308,14 +1309,14 @@ static void pulse_read(ACImpl *This)
+ 
+ static DWORD WINAPI pulse_timer_cb(void *user)
+ {
+-    DWORD delay;
++    LARGE_INTEGER delay;
+     UINT32 adv_bytes;
+     ACImpl *This = user;
+     int success;
+     pa_operation *o;
+ 
+     pthread_mutex_lock(&pulse_lock);
+-    delay = This->mmdev_period_usec / 1000;
++    delay.QuadPart = -This->mmdev_period_usec * 10;
+     pa_stream_get_time(This->stream, &This->last_time);
+     pthread_mutex_unlock(&pulse_lock);
+ 
+@@ -1323,11 +1324,11 @@ static DWORD WINAPI pulse_timer_cb(void *user)
+         pa_usec_t now, adv_usec = 0;
+         int err;
+ 
+-        Sleep(delay);
++        NtDelayExecution(FALSE, &delay);
+ 
+         pthread_mutex_lock(&pulse_lock);
+ 
+-        delay = This->mmdev_period_usec / 1000;
++        delay.QuadPart = -This->mmdev_period_usec * 10;
+ 
+         o = pa_stream_update_timing_info(This->stream, pulse_op_cb, &success);
+         if (o)
+@@ -1363,7 +1364,7 @@ static DWORD WINAPI pulse_timer_cb(void *user)
+                     else if(adjust < -((INT32)(This->mmdev_period_usec / 2)))
+                         adjust = -1 * This->mmdev_period_usec / 2;
+ 
+-                    delay = (This->mmdev_period_usec + adjust) / 1000;
++                    delay.QuadPart = -(This->mmdev_period_usec + adjust) * 10;
+ 
+                     This->last_time += This->mmdev_period_usec;
+                 }
+@@ -1381,16 +1382,16 @@ static DWORD WINAPI pulse_timer_cb(void *user)
+                 }
+             }else{
+                 This->last_time = now;
+-                delay = This->mmdev_period_usec / 1000;
++                delay.QuadPart = -This->mmdev_period_usec * 10;
+             }
+         }
+ 
+         if (This->event)
+             SetEvent(This->event);
+ 
+-        TRACE("%p after update, adv usec: %d, held: %u, delay: %u\n",
++        TRACE("%p after update, adv usec: %d, held: %u, delay usec: %u\n",
+                 This, (int)adv_usec,
+-                (int)(This->held_bytes/ pa_frame_size(&This->ss)), delay);
++                (int)(This->held_bytes/ pa_frame_size(&This->ss)), -delay.QuadPart / 10);
+ 
+         pthread_mutex_unlock(&pulse_lock);
+     }
+-- 
+2.30.1
+

@@ -12,8 +12,6 @@ The `master` branch uses stable wine and seems to work the best, but the `stagin
 
 Environment variables:
 
-- `DEFAULT_MINREQ` - set this flag to use winepulse's default PulseAudio minimum request
-- `PULSE_TLENGTH` - override the default (1000) target length for Pulse
-- `PULSE_OVERRIDE_MIN` - set this to keep wine from forcing the minimum and default period; I've had success with this flag
 - `STAGING_AUDIO_DURATION` - set the staging audio duration; I've had success with this being set to 10000, but this varies from PC to PC, so I recommend tweaking this to your liking
 - `STAGING_AUDIO_PERIOD` - set the staging audio period; I use 3000, but same disclaimer from above applies
+- `STAGING_TLENGTH_USEC` - can also help with latency but will update on where it is used.
