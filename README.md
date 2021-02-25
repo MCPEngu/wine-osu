@@ -12,6 +12,9 @@ The `master` branch uses stable wine and seems to work the best, but the `stagin
 
 Environment variables:
 
-- `STAGING_AUDIO_DURATION` - set the staging audio duration; I've had success with this being set to 10000, but this varies from PC to PC, so I recommend tweaking this to your liking
-- `STAGING_AUDIO_PERIOD` - set the staging audio period; I use 3000, but same disclaimer from above applies
+- `STAGING_AUDIO_DURATION` - set the staging audio duration; I've had success with this being set to 20000, but this varies from PC to PC, so I recommend tweaking this to your liking
+- `STAGING_AUDIO_PERIOD` - set the staging audio period; I use 15000, but same disclaimer from above applies
 - `STAGING_TLENGTH_USEC` - can also help with latency but will update on where it is used.
+
+**SYSTEM OPTIONS**
+- `PULSE_LATENCY_MSEC` - an option to reduce latency on the system, I use 10 but it varies PC to PC
