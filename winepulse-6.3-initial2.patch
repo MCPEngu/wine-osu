@@ -1,0 +1,60 @@
+diff --git a/dlls/winepulse.drv/mmdevdrv.c b/dlls/winepulse.drv/mmdevdrv.c
+index 417067f0bf8..48514692db8 100644
+--- a/dlls/winepulse.drv/mmdevdrv.c
++++ b/dlls/winepulse.drv/mmdevdrv.c
+@@ -68,9 +68,6 @@ enum DriverPriority {
+     Priority_Preferred
+ };
+ 
+-static const REFERENCE_TIME MinimumPeriod = 30000;
+-static const REFERENCE_TIME DefaultPeriod = 100000;
+-
+ static pa_context *pulse_ctx;
+ static pa_mainloop *pulse_ml;
+ 
+@@ -510,14 +507,14 @@ static void pulse_probe_settings(int render, WAVEFORMATEXTENSIBLE *fmt) {
+     if (stream)
+         pa_stream_unref(stream);
+ 
+-    if (length)
++    if (length) {
+         pulse_def_period[!render] = pulse_min_period[!render] = pa_bytes_to_usec(10 * length, &ss);
+-
+-    if (pulse_min_period[!render] < MinimumPeriod)
+-        pulse_min_period[!render] = MinimumPeriod;
+-
+-    if (pulse_def_period[!render] < DefaultPeriod)
+-        pulse_def_period[!render] = DefaultPeriod;
++        printf("Using length '%lld' returned from PA\n", length);
++    } else {
++        int default_us = 333;
++        pulse_def_period[!render] = pulse_min_period[!render] = pa_usec_to_bytes(default_us, &ss);
++        printf("Using default length '%lld' (%lld us)\n", length, default_us);
++    }
+ 
+     wfx->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+     wfx->cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+@@ -1645,9 +1642,23 @@ static HRESULT WINAPI AudioClient_Initialize(IAudioClient3 *iface,
+         goto exit;
+ 
+     period = pulse_def_period[This->dataflow == eCapture];
++    const char *duration_env = getenv("STAGING_AUDIO_DURATION");
++    if (duration_env) {
++        int val = atoi(duration_env);
++        if (val == 0) {
++            printf("ignoring duration: %lld requested by program; using duration: %lld\n", duration, 3 * period);
++            duration = 3 * period;
++        } else {
++            printf("duration overwritten: %lld\n", val);
++            duration = val;
++        }
++    }
++
+     if (duration < 3 * period)
+         duration = 3 * period;
+ 
++    printf("duration: %lld; period: %lld\n", duration, period);
++
+     This->period_bytes = pa_frame_size(&This->ss) * MulDiv(period, This->ss.rate, 10000000);
+ 
+     This->bufsize_frames = ceil((duration / 10000000.) * fmt->nSamplesPerSec);

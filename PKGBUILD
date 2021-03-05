@@ -6,12 +6,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-osu
-pkgver=5.22
+pkgver=6.3
 pkgrel=2
 
 _pkgbasever=${pkgver/rc/-rc}
 
-source=(https://dl.winehq.org/wine/source/5.x/wine-$_pkgbasever.tar.xz{,.sign}
+source=(https://dl.winehq.org/wine/source/6.x/wine-$_pkgbasever.tar.xz{,.sign}
         ps0344-p0001-secur32-Fix-crash-from-invalid-context-in-Initialize.patch
         wine-4.2-alsa-lower-latency.patch
         winepulse-v515revert-ultimate.patch
